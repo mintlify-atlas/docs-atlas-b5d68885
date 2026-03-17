@@ -1,0 +1,54 @@
+{
+  "projectType": "general",
+  "projectName": "MS200 LiDAR Driver for ROS 2",
+  "projectDescription": "A native ROS 2 Python driver for the MKS/Oradar MS200 TOF LiDAR sensor that decodes serial packets and publishes standard LaserScan messages.",
+  "theme": "aspen",
+  "primaryColor": "#0066CC",
+  "lightColor": "#3399FF",
+  "darkColor": "#003D7A",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Setup",
+            "pages": ["setup/installation", "setup/configuration", "setup/serial-permissions"]
+          },
+          {
+            "group": "Usage",
+            "pages": ["usage/running-the-node", "usage/ros-parameters", "usage/ros-topics", "usage/rviz-visualization"]
+          },
+          {
+            "group": "Reference",
+            "pages": ["reference/protocol", "reference/api", "reference/troubleshooting"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Native Python implementation with no proprietary SDK dependencies",
+    "Automatic detection of MS200 serial frame header (0x54 0x2C)",
+    "Publishes standard sensor_msgs/LaserScan messages on /scan topic",
+    "Configurable serial port, baudrate, and TF frame ID via ROS 2 parameters",
+    "Compatible with Nav2 and SLAM Toolbox out of the box",
+    "Tested on Raspberry Pi 5 with ROS 2 Jazzy",
+    "360-degree scan reconstruction from 12-point measurement packets"
+  ],
+  "publicApiSurface": [
+    "ms200_node (ROS 2 executable entry point)",
+    "MS200Node (rclpy.Node class)",
+    "Parameter: port (string, default: /dev/ttyUSB0)",
+    "Parameter: baudrate (int, default: 230400)",
+    "Parameter: frame_id (string, default: laser_frame)",
+    "Published topic: /scan (sensor_msgs/msg/LaserScan)",
+    "MS200Node.read_serial_data() - timer callback to read and buffer serial data",
+    "MS200Node.parse_packet(data) - decode 47-byte MS200 packet",
+    "MS200Node.publish_scan() - assemble and publish full 360-degree LaserScan message"
+  ]
+}
