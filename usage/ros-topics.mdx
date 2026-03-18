@@ -48,7 +48,7 @@ The following fields are populated by the driver on each publish:
 </ResponseField>
 
 <ResponseField name="ranges" type="float32[]">
-  Array of distance measurements in meters, one entry per scan point. Points with a raw distance of 0 mm from the sensor are excluded from the array. All populated entries contain valid distance values; `inf` is used as the fill value for any slot without a corresponding reading.
+  Array of distance measurements in meters, one entry per accumulated scan point. The array is pre-filled with `float('inf')` and then populated with valid distance values. Points with a raw distance of `0 mm` from the sensor are excluded before the array is built, so all entries in `ranges` represent valid measurements.
 </ResponseField>
 
 <ResponseField name="intensities" type="float32[]">

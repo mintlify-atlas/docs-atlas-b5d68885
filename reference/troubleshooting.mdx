@@ -98,7 +98,7 @@ Before diving into specific issues, run through these checks:
     **Inspect raw serial output** to check whether packets are arriving:
 
     ```bash
-    cat /dev/ttyUSB0 | xxd | head
+    cat /dev/ttyUSB0 | xxd | head -20
     ```
 
     Valid data will contain the two-byte header `54 2c` repeating at regular intervals. If the output is empty or all zeros, the LiDAR is not transmitting.

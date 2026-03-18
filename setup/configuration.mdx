@@ -54,7 +54,7 @@ Look for a line mentioning `USB Serial` or `cp210x` (the MS200 uses a CP210x USB
   The Linux serial device path for the MS200 sensor. Change this if the sensor enumerates on a port other than `/dev/ttyUSB0` (for example, `/dev/ttyUSB1` when multiple USB serial devices are connected).
 </ParamField>
 
-<ParamField path="baudrate" type="number" default="230400">
+<ParamField path="baudrate" type="integer" default="230400">
   Serial communication baud rate between the host and the sensor. The MS200 ships configured at 230400 baud. Common alternative values are `115200` and `460800`, but these require matching reconfiguration of the sensor firmware.
 </ParamField>
 
