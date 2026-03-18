@@ -1,0 +1,63 @@
+---
+title: "Configuration"
+description: Configuring the MS200 driver node parameters
+---
+
+The `ms200_node` exposes three ROS 2 parameters that control how it communicates with the sensor and labels its output data. All parameters have sensible defaults and can be overridden at launch time without modifying any source files.
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | string | `/dev/ttyUSB0` | Serial port where the LiDAR is connected |
+| `baudrate` | int | `230400` | Communication baud rate |
+| `frame_id` | string | `laser_frame` | TF frame ID for the `LaserScan` message header |
+
+<Note>
+The MS200 default baud rate is **230400**. Only change `baudrate` if you have explicitly reconfigured the sensor's communication settings.
+</Note>
+
+## Passing parameters at runtime
+
+Use the `--ros-args -p` syntax to override one or more parameters when launching the node.
+
+Override a single parameter:
+
+```bash
+ros2 run ms200_driver ms200_node --ros-args -p port:=/dev/ttyUSB1 -p baudrate:=115200
+```
+
+Override all three parameters at once:
+
+```bash
+ros2 run ms200_driver ms200_node --ros-args \
+  -p port:=/dev/ttyUSB1 \
+  -p baudrate:=115200 \
+  -p frame_id:=lidar_frame
+```
+
+<Tip>
+To find the correct serial port after connecting the sensor, run:
+
+```bash
+ls /dev/ttyUSB*
+# or, to see the most recent USB device events:
+dmesg | tail -20
+```
+
+Look for a line mentioning `USB Serial` or `cp210x` (the MS200 uses a CP210x USB-to-serial chip) to identify the correct port.
+</Tip>
+
+## Parameter reference
+
+<ParamField path="port" type="string" default="/dev/ttyUSB0">
+  The Linux serial device path for the MS200 sensor. Change this if the sensor enumerates on a port other than `/dev/ttyUSB0` (for example, `/dev/ttyUSB1` when multiple USB serial devices are connected).
+</ParamField>
+
+<ParamField path="baudrate" type="number" default="230400">
+  Serial communication baud rate between the host and the sensor. The MS200 ships configured at 230400 baud. Common alternative values are `115200` and `460800`, but these require matching reconfiguration of the sensor firmware.
+</ParamField>
+
+<ParamField path="frame_id" type="string" default="laser_frame">
+  The TF coordinate frame ID stamped into every `sensor_msgs/LaserScan` message published by the node. Set this to match the frame defined in your robot's URDF or TF tree (for example, `lidar_frame`, `base_scan`, or `laser`).
+</ParamField>

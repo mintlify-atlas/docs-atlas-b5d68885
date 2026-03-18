@@ -1,0 +1,158 @@
+---
+title: "API reference"
+description: Python class and method reference for the MS200Node driver
+---
+
+## Overview
+
+The driver is implemented as a single Python module. It is designed to run as a ROS 2 node and is not intended to be used as an importable library.
+
+**Module:** `ms200_driver.ms200_node`
+
+<Note>
+  The primary way to interact with this driver is through ROS 2 parameters and topics. Run the node with `ros2 run` and communicate with it via the `/scan` topic and standard ROS 2 tooling. See the usage guides for details.
+</Note>
+
+## Constants
+
+| Name | Value | Description |
+|------|-------|-------------|
+| `HEADER` | `b'\x54\x2C'` | Packet frame start bytes used to synchronize the byte stream |
+| `PACKET_SIZE` | `47` | Total length of a single MS200 data packet in bytes |
+
+## Class: `MS200Node`
+
+```python
+class MS200Node(rclpy.node.Node)
+```
+
+Main ROS 2 node class. Manages the serial connection to the LiDAR, parses incoming packets, accumulates measurement points, and publishes complete `LaserScan` messages.
+
+### Constructor
+
+```python
+def __init__(self)
+```
+
+Initializes the node with the name `ms200_node`. Declares ROS 2 parameters, opens the serial port, creates the `/scan` publisher, and starts the 1 ms read timer.
+
+If the serial port cannot be opened, an error is logged and the node exits early without starting the timer.
+
+**ROS 2 parameters declared:**
+
+<ParamField path="port" type="string" default="/dev/ttyUSB0">
+  Serial port path for the USB-to-serial adapter connected to the LiDAR.
+</ParamField>
+
+<ParamField path="baudrate" type="number" default="230400">
+  UART baud rate. Must match the LiDAR firmware setting. The MS200 default is 230400.
+</ParamField>
+
+<ParamField path="frame_id" type="string" default="laser_frame">
+  TF frame ID written into the `header.frame_id` of every published `LaserScan` message.
+</ParamField>
+
+---
+
+### `read_serial_data`
+
+```python
+def read_serial_data(self) -> None
+```
+
+Timer callback invoked every **1 ms**. Reads all available bytes from the serial buffer and appends them to `self.current_packet`. Then scans the accumulated buffer for complete 47-byte packets:
+
+- If the buffer starts with the header `0x54 0x2C`, the next 47 bytes are extracted and passed to `parse_packet`.
+- If the buffer does not start with the header, the first byte is discarded and the scan repeats.
+
+This byte-by-byte resynchronization ensures the driver recovers from partial reads or buffer misalignment without dropping valid packets.
+
+---
+
+### `parse_packet`
+
+```python
+def parse_packet(self, data: bytes) -> None
+```
+
+Decodes a single 47-byte MS200 packet and appends up to 12 measurement points to `self.scan_points`.
+
+<ParamField path="data" type="bytes" required>
+  A 47-byte sequence starting with the header `0x54 0x2C`, as read from the serial stream.
+</ParamField>
+
+**Behavior:**
+
+1. Extracts `speed`, `start_angle`, and `end_angle` from the packet header fields.
+2. Applies zero-cross correction: if `end_angle < start_angle`, adds 360°.
+3. Computes the angular step between the 12 measurement points.
+4. For each of the 12 points, extracts `distance_mm` and `intensity`. Points with `distance_mm == 0` are skipped.
+5. Converts distance to meters and appends `(angle_deg, distance_m)` to `self.scan_points`.
+6. If `start_angle < 10.0` and `len(self.scan_points) > 100`, calls `publish_scan()` to emit a full rotation.
+
+---
+
+### `publish_scan`
+
+```python
+def publish_scan(self) -> None
+```
+
+Assembles and publishes a `sensor_msgs/LaserScan` message from the accumulated points, then clears the point buffer.
+
+**Behavior:**
+
+1. Returns immediately if `self.scan_points` is empty.
+2. Sorts points by angle (ascending).
+3. Builds a `LaserScan` message with:
+   - `header.stamp` set to the current ROS clock time
+   - `header.frame_id` set to the `frame_id` parameter
+   - `angle_min = 0.0`, `angle_max = 2π`
+   - `range_min = 0.02` m (2 cm), `range_max = 12.0` m
+   - `angle_increment = 2π / number_of_points`
+   - `ranges` array populated with distance values in meters
+4. Publishes the message to the `/scan` topic.
+5. Clears `self.scan_points`.
+
+---
+
+## Entry point: `main`
+
+```python
+def main(args=None) -> None
+```
+
+Standard ROS 2 entry point. Initializes `rclpy`, creates an `MS200Node` instance, spins it until a `KeyboardInterrupt` is received, then destroys the node and shuts down `rclpy`.
+
+## Running the node
+
+The driver is intended to be launched with `ros2 run`, not imported as a library:
+
+```bash
+# Default settings
+ros2 run ms200_driver ms200_node
+
+# Custom port and frame ID
+ros2 run ms200_driver ms200_node --ros-args \
+  -p port:=/dev/ttyUSB1 \
+  -p frame_id:=lidar_link
+```
+
+For reference, the equivalent programmatic usage is:
+
+```python
+import rclpy
+from ms200_driver.ms200_node import MS200Node
+
+rclpy.init()
+node = MS200Node()
+rclpy.spin(node)
+node.destroy_node()
+rclpy.shutdown()
+```
+
+## Published topics
+
+| Topic | Type | Description |
+|-------|------|-------------|
+| `/scan` | `sensor_msgs/LaserScan` | Full 360° scan published once per revolution |

@@ -1,0 +1,68 @@
+---
+title: "ROS 2 parameters"
+description: Complete reference for all configurable ROS 2 parameters in the MS200 driver
+---
+
+The MS200 driver node declares three parameters during initialization using `declare_parameter()`. All parameters are read once at startup when the serial connection is opened.
+
+<Note>
+Parameters are read in `__init__` before the serial port is opened. Changing a parameter value after the node has started has no effect — the new value will not be applied until the node is restarted.
+</Note>
+
+## Parameter reference
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | string | `/dev/ttyUSB0` | Serial device path for the LiDAR |
+| `baudrate` | int | `230400` | Serial communication baud rate |
+| `frame_id` | string | `laser_frame` | TF frame ID attached to published `LaserScan` messages |
+
+<ParamField path="port" type="string" default="/dev/ttyUSB0">
+  The filesystem path to the serial device connected to the MS200 LiDAR. Common values are `/dev/ttyUSB0`, `/dev/ttyUSB1`, or `/dev/ttyACM0` depending on your system. Use `ls /dev/tty*` before and after connecting the sensor to identify the correct device.
+</ParamField>
+
+<ParamField path="baudrate" type="integer" default="230400">
+  The baud rate used to open the serial connection. The MS200 sensor operates at 230400 baud by default. Only change this value if your hardware or a launch configuration requires a different rate.
+</ParamField>
+
+<ParamField path="frame_id" type="string" default="laser_frame">
+  The TF coordinate frame ID written into the `header.frame_id` field of every published `sensor_msgs/msg/LaserScan` message. This value must match the Fixed Frame set in RViz2 and any TF transforms published by your robot description. See [RViz2 visualization](/usage/rviz-visualization) for details.
+</ParamField>
+
+## Setting parameters at launch
+
+Pass one or more parameters using `--ros-args -p <name>:=<value>`:
+
+```bash
+ros2 run ms200_driver ms200_node --ros-args -p port:=/dev/ttyUSB1
+```
+
+```bash
+ros2 run ms200_driver ms200_node --ros-args -p baudrate:=115200
+```
+
+```bash
+ros2 run ms200_driver ms200_node --ros-args -p frame_id:=lidar_frame
+```
+
+You can combine multiple overrides in a single command:
+
+```bash
+ros2 run ms200_driver ms200_node --ros-args -p port:=/dev/ttyUSB1 -p frame_id:=lidar_frame
+```
+
+## Inspecting parameters at runtime
+
+While the node is running, use the ROS 2 parameter CLI to list and query parameter values:
+
+```bash
+ros2 param list /ms200_node
+```
+
+```bash
+ros2 param get /ms200_node port
+```
+
+<Tip>
+Use `ros2 param dump /ms200_node` to export all current parameter values to YAML. This is useful for capturing a working configuration to reuse in a launch file.
+</Tip>

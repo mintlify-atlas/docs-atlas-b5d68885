@@ -1,0 +1,88 @@
+---
+title: "ROS topics"
+description: Published topics and message types from the MS200 LiDAR driver
+---
+
+The MS200 driver publishes a single topic.
+
+| Topic | Message type | Queue size |
+|-------|-------------|------------|
+| `/scan` | `sensor_msgs/msg/LaserScan` | 10 |
+
+A new message is published each time the driver detects the start of a new rotation: when an incoming packet has `start_angle < 10.0°` and more than 100 scan points have been accumulated for the current revolution.
+
+## LaserScan message fields
+
+The following fields are populated by the driver on each publish:
+
+<ResponseField name="header.stamp" type="builtin_interfaces/Time">
+  Timestamp set to the current ROS clock time at the moment of publishing, obtained via `self.get_clock().now().to_msg()`.
+</ResponseField>
+
+<ResponseField name="header.frame_id" type="string">
+  The TF coordinate frame ID. Set to the value of the `frame_id` parameter (default: `laser_frame`).
+</ResponseField>
+
+<ResponseField name="angle_min" type="float32">
+  Start angle of the scan in radians. Always `0.0` (0 degrees).
+</ResponseField>
+
+<ResponseField name="angle_max" type="float32">
+  End angle of the scan in radians. Always `2π` (360 degrees).
+</ResponseField>
+
+<ResponseField name="angle_increment" type="float32">
+  Angular distance between measurements in radians. Computed as `(2π) / num_points`, where `num_points` is the number of valid readings accumulated in the current rotation.
+</ResponseField>
+
+<ResponseField name="time_increment" type="float32">
+  Time between individual measurements. Set to `0.0` — the driver does not compute per-point timing.
+</ResponseField>
+
+<ResponseField name="range_min" type="float32">
+  Minimum valid range in meters. Set to `0.02` (2 cm).
+</ResponseField>
+
+<ResponseField name="range_max" type="float32">
+  Maximum valid range in meters. Set to `12.0` (12 m).
+</ResponseField>
+
+<ResponseField name="ranges" type="float32[]">
+  Array of distance measurements in meters, one entry per scan point. Points with a raw distance of 0 mm from the sensor are excluded from the array. All populated entries contain valid distance values; `inf` is used as the fill value for any slot without a corresponding reading.
+</ResponseField>
+
+<ResponseField name="intensities" type="float32[]">
+  Not populated. The driver does not include intensity data in the published message. This field is empty.
+</ResponseField>
+
+## Verifying the topic
+
+With the node running, use the standard ROS 2 topic CLI to inspect the `/scan` topic:
+
+```bash
+ros2 topic list
+```
+
+```bash
+ros2 topic echo /scan
+```
+
+```bash
+ros2 topic hz /scan
+```
+
+```bash
+ros2 topic info /scan
+```
+
+<Tip>
+Use `ros2 topic hz /scan` to confirm the publish rate. You should see approximately 10 Hz under normal operating conditions.
+</Tip>
+
+## Compatible consumers
+
+The `/scan` topic publishes a standard `sensor_msgs/msg/LaserScan` message and is compatible with any ROS 2 package that subscribes to this message type, including:
+
+- **RViz2** — for real-time visualization. See [RViz2 visualization](/usage/rviz-visualization).
+- **Nav2** — the ROS 2 navigation stack uses `/scan` for obstacle detection and costmap updates.
+- **SLAM Toolbox** — subscribes to `/scan` for simultaneous localization and mapping.

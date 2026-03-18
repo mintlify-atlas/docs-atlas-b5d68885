@@ -1,80 +1,107 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get the MS200 LiDAR driver running in ROS 2 in under 5 minutes
 ---
 
-## Get started in three steps
+# Quickstart
 
-Get your documentation site running locally and make your first customization.
+This guide walks you through cloning, building, and running the MS200 LiDAR driver in a ROS 2 workspace.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- ROS 2 installed (Jazzy recommended)
+- A ROS 2 workspace (e.g., `~/ros2_ws`)
+- MKS MS200 / Oradar MS200 LiDAR connected via USB-to-Serial adapter
+- `rosdep` available for dependency installation
 
-### Step 2: Deploy your changes
+## Steps
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Steps>
+  <Step title="Clone the repository">
+    Navigate to your ROS 2 workspace source directory and clone the driver:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    cd ~/ros2_ws/src
+    git clone https://github.com/jasonmm24/ms200_driver.git
+    ```
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Install dependencies">
+    From the workspace root, use `rosdep` to install all required dependencies:
 
-### Step 3: Go live
+    ```bash
+    cd ~/ros2_ws
+    rosdep install --from-paths src --ignore-src -r -y
+    ```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    This installs `python3-serial` and any other declared dependencies from `package.xml`.
+  </Step>
 
-## Next steps
+  <Step title="Build the package">
+    Build the `ms200_driver` package using `colcon`:
 
-Now that you have your docs running, explore these key features:
+    ```bash
+    colcon build --symlink-install --packages-select ms200_driver
+    source install/setup.bash
+    ```
+
+    <Tip>
+      Using `--symlink-install` means Python source changes are reflected immediately without rebuilding.
+    </Tip>
+  </Step>
+
+  <Step title="Grant serial port access">
+    Ensure your user has permission to access the USB serial port:
+
+    ```bash
+    sudo chmod 777 /dev/ttyUSB0
+    ```
+
+    For permanent access, add your user to the `dialout` group (requires logout/reboot):
+
+    ```bash
+    sudo usermod -a -G dialout $USER
+    ```
+  </Step>
+
+  <Step title="Run the driver">
+    Start the MS200 node with default settings (`/dev/ttyUSB0`, 230400 baud):
+
+    ```bash
+    ros2 run ms200_driver ms200_node
+    ```
+
+    You should see output confirming the connection:
+
+    ```
+    [INFO] [ms200_node]: Conectado al LiDAR en /dev/ttyUSB0 a 230400
+    ```
+  </Step>
+
+  <Step title="Verify data output">
+    In a second terminal, verify the driver is publishing scan data:
+
+    ```bash
+    ros2 topic echo /scan --once
+    ```
+
+    You should see a `sensor_msgs/msg/LaserScan` message with populated `ranges` data.
+  </Step>
+</Steps>
+
+## What's next?
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="ROS Parameters" icon="sliders" href="/usage/ros-parameters">
+    Learn how to configure port, baudrate, and frame ID
+  </Card>
+  <Card title="RViz Visualization" icon="eye" href="/usage/rviz-visualization">
+    Visualize the LiDAR scan data in RViz2
+  </Card>
+  <Card title="ROS Topics" icon="circle-nodes" href="/usage/ros-topics">
+    Understand the published topics and message types
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/reference/troubleshooting">
+    Diagnose common connection and data issues
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

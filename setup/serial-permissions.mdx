@@ -1,0 +1,81 @@
+---
+title: "Serial port permissions"
+description: Configuring Linux serial port permissions for the MS200 LiDAR
+---
+
+On Linux, serial devices such as `/dev/ttyUSB0` are owned by the `dialout` group. By default, only `root` and members of that group can read from or write to these devices. Without the correct permissions, the `ms200_node` will fail immediately on startup.
+
+## Identifying your device port
+
+After connecting the MS200 via USB, find the assigned port:
+
+```bash
+ls /dev/ttyUSB*
+# or
+dmesg | tail -20
+```
+
+Look for a line referencing `USB Serial` or `cp210x`. The device will typically appear as `/dev/ttyUSB0`.
+
+## Granting access
+
+There are two approaches: a temporary fix for quick testing, and a permanent solution for regular use.
+
+### Temporary permission (testing only)
+
+<Warning>
+The following command resets every time the device is unplugged or the system reboots. Do not rely on this for production or persistent setups.
+</Warning>
+
+```bash
+sudo chmod 777 /dev/ttyUSB0
+```
+
+This opens the device to all users immediately, without requiring a logout.
+
+### Permanent fix
+
+Add your user account to the `dialout` group so access persists across reboots and device reconnections.
+
+<Steps>
+  <Step title="Add your user to the dialout group">
+    ```bash
+    sudo usermod -a -G dialout $USER
+    ```
+  </Step>
+
+  <Step title="Log out and back in (or reboot)">
+    Group membership changes do not take effect in already-running sessions. Log out and log back in, or reboot:
+
+    ```bash
+    sudo reboot
+    ```
+  </Step>
+
+  <Step title="Verify group membership">
+    Confirm that `dialout` appears in your group list:
+
+    ```bash
+    groups $USER
+    # Should include: dialout
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+If permissions are not set correctly, the node will exit with an error similar to:
+
+```
+PermissionError: [Errno 13] Permission denied: '/dev/ttyUSB0'
+```
+
+If you see this error after adding yourself to `dialout`, make sure you have fully logged out and back in — a simple terminal restart is not sufficient for group changes to apply.
+
+## Advanced: udev rules for consistent device naming
+
+<Note>
+This step is optional but useful in multi-sensor setups or when the USB port assignment changes between reboots.
+
+A udev rule can assign a fixed symlink (for example, `/dev/lidar_ms200`) to the MS200 based on its USB vendor and product ID. This ensures the `port` parameter in your launch configuration never needs updating when other USB devices are added or removed. See the [udev rules documentation](https://www.freedesktop.org/software/systemd/man/udev_rules.html) for details.
+</Note>

@@ -1,0 +1,69 @@
+---
+title: "RViz2 visualization"
+description: Visualizing MS200 LiDAR scan data in RViz2
+---
+
+RViz2 can display the `/scan` topic in real time, letting you verify that the sensor is working and inspect the point cloud visually.
+
+## Prerequisites
+
+- The `ms200_node` is running and publishing data on `/scan`
+- RViz2 is installed (included with a standard ROS 2 desktop install)
+
+## Setting up the display
+
+<Steps>
+  <Step title="Start RViz2">
+    Open a new terminal and launch RViz2:
+
+    ```bash
+    rviz2
+    ```
+  </Step>
+
+  <Step title="Set the Fixed Frame">
+    In the **Displays** panel on the left, locate the **Global Options** section and set **Fixed Frame** to `laser_frame` (or whatever value you configured for the `frame_id` parameter).
+
+    <Warning>
+      If the Fixed Frame does not match the `frame_id` parameter used by the node, RViz2 will not render the scan and will show a frame error in the status bar. The two values must be identical.
+    </Warning>
+  </Step>
+
+  <Step title="Add the LaserScan display">
+    Click **Add** at the bottom of the **Displays** panel, then select the **By topic** tab. Find `/scan` in the list and select **LaserScan**, then click **OK**.
+  </Step>
+
+  <Step title="Adjust display properties">
+    The **LaserScan** entry now appears in the **Displays** panel. Expand it to configure the visual appearance:
+
+    - **Style**: `Points`, `Lines`, or `Spheres`
+    - **Size (m)**: point or line size in meters
+    - **Color Transformer**: change the coloring scheme (e.g., flat color or intensity)
+  </Step>
+</Steps>
+
+## Alternative: add by display type
+
+If you prefer to add the display by type rather than by topic:
+
+<Steps>
+  <Step title="Add by display type">
+    Click **Add** → **By display type** → **LaserScan**, then click **OK**.
+  </Step>
+
+  <Step title="Set the topic">
+    In the **LaserScan** entry in the **Displays** panel, set **Topic** to `/scan`.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+If no scan data appears in RViz2, check the following:
+
+- **Publish rate**: run `ros2 topic hz /scan` — you should see approximately 10 Hz. If there is no output, the node is not publishing.
+- **Fixed Frame mismatch**: confirm the Fixed Frame in RViz2 matches the `frame_id` parameter exactly (default: `laser_frame`).
+- **Physical connection**: verify the LiDAR is powered, spinning, and connected to the correct serial port.
+
+<Tip>
+  Once you have the display configured correctly, save your RViz2 layout via **File** → **Save Config As** so you can reload it in future sessions without repeating the setup.
+</Tip>

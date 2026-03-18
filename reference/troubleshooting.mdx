@@ -1,0 +1,179 @@
+---
+title: "Troubleshooting"
+description: Diagnosing and fixing common issues with the MS200 LiDAR driver
+---
+
+## Quick diagnostic checklist
+
+Before diving into specific issues, run through these checks:
+
+- The USB-to-serial adapter is plugged in and recognized: `ls /dev/ttyUSB*`
+- Your user has permission to access the serial port: `ls -l /dev/ttyUSB0`
+- The ROS 2 workspace is sourced: `echo $AMENT_PREFIX_PATH`
+- The LiDAR is powered and the motor is spinning
+- The baud rate matches the LiDAR firmware setting (default: `230400`)
+- The `/scan` topic is publishing: `ros2 topic hz /scan`
+
+---
+
+## Common issues
+
+<AccordionGroup>
+
+  <Accordion title='"No such file or directory: /dev/ttyUSB0"'>
+
+    **Cause:** The USB-to-serial adapter is not detected by the operating system, or the device is on a different port.
+
+    **Steps to fix:**
+
+    <Steps>
+      <Step title="List available serial ports">
+        ```bash
+        ls /dev/ttyUSB*
+        ```
+        If no devices appear, the adapter is not recognized.
+      </Step>
+      <Step title="Check kernel messages after plugging in">
+        Unplug the adapter, plug it back in, then run:
+        ```bash
+        dmesg | tail -20
+        ```
+        Look for a line like `usb ... now attached to ttyUSB0`. The number at the end is the port index.
+      </Step>
+      <Step title="Verify the USB cable">
+        Use a data-capable USB cable, not a charge-only cable. Try a different cable or USB port.
+      </Step>
+      <Step title="Pass the correct port to the node">
+        Replace `X` with the port number from the previous step:
+        ```bash
+        ros2 run ms200_driver ms200_node --ros-args -p port:=/dev/ttyUSBX
+        ```
+      </Step>
+    </Steps>
+
+  </Accordion>
+
+  <Accordion title='"Permission denied: /dev/ttyUSB0"'>
+
+    **Cause:** Your user account is not in the `dialout` group, which owns serial port devices on Linux.
+
+    **Temporary fix** (resets on reboot):
+
+    ```bash
+    sudo chmod 777 /dev/ttyUSB0
+    ```
+
+    **Permanent fix** (recommended):
+
+    ```bash
+    sudo usermod -a -G dialout $USER
+    ```
+
+    <Warning>
+      You must log out and log back in (or reboot) for the group change to take effect.
+    </Warning>
+
+  </Accordion>
+
+  <Accordion title="Node starts but no data on /scan">
+
+    **Cause:** The LiDAR is not spinning or sending data, or there is a baud rate mismatch.
+
+    **Check the publish rate:**
+
+    ```bash
+    ros2 topic hz /scan
+    ```
+
+    The `/scan` topic should publish at approximately 10 Hz. If there is no output, the node is not receiving valid packets.
+
+    **Verify the LiDAR is powered and spinning.** The motor should be audible and the unit warm to the touch after a few seconds.
+
+    **Confirm the baud rate:**
+
+    ```bash
+    ros2 run ms200_driver ms200_node --ros-args -p baudrate:=230400
+    ```
+
+    **Inspect raw serial output** to check whether packets are arriving:
+
+    ```bash
+    cat /dev/ttyUSB0 | xxd | head
+    ```
+
+    Valid data will contain the two-byte header `54 2c` repeating at regular intervals. If the output is empty or all zeros, the LiDAR is not transmitting.
+
+  </Accordion>
+
+  <Accordion title='RViz2 shows "No transform from [laser_frame] to [map]"'>
+
+    **Cause:** RViz2 is configured with `map` as its Fixed Frame, but there is no TF transform linking `laser_frame` to `map`.
+
+    **Option 1 — Change the Fixed Frame in RViz2:**
+
+    In the RViz2 **Displays** panel, find **Global Options → Fixed Frame** and set it to `laser_frame`. This is the simplest approach when you only need to view the LiDAR data without a map.
+
+    **Option 2 — Publish a static transform:**
+
+    ```bash
+    ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map laser_frame
+    ```
+
+    This publishes an identity transform between `map` and `laser_frame`, allowing RViz2 to display the scan without error.
+
+  </Accordion>
+
+  <Accordion title="Scan data looks incorrect or sparse">
+
+    **Cause:** A baud rate mismatch causes the serial stream to be decoded incorrectly, resulting in corrupted packets. The driver discards invalid packets, producing a sparse or empty scan.
+
+    **Check the baud rate setting.** The MS200 default is `230400`. If your LiDAR firmware has been reconfigured, set the matching value:
+
+    ```bash
+    ros2 run ms200_driver ms200_node --ros-args -p baudrate:=230400
+    ```
+
+    **Understand packet synchronization.** Packets are 47 bytes each and begin with the two-byte header `0x54 0x2C`. If the header is not found at the current read position, the driver discards bytes one at a time until it resynchronizes. This means a single corrupted packet causes only a brief gap rather than a full loss of data.
+
+  </Accordion>
+
+  <Accordion title='"Error parseando paquete" warnings in logs'>
+
+    **Cause:** A packet failed to decode — typically because it was malformed or truncated.
+
+    This warning is **normal during startup**. As the driver begins reading from the serial buffer, the first bytes it receives may be the middle of a packet in progress. The driver resynchronizes to the next valid header, and warnings stop once it is aligned.
+
+    **Persistent warnings** after the first few seconds indicate one of the following:
+
+    - Baud rate mismatch between the driver and the LiDAR firmware
+    - Electrical noise or an unreliable USB cable causing byte errors
+    - The USB-to-serial adapter dropping bytes under load
+
+    Try a different USB cable or port, and confirm the baud rate matches the LiDAR firmware.
+
+  </Accordion>
+
+  <Accordion title="Package not found after building the workspace">
+
+    **Cause:** The ROS 2 install directory has not been sourced in the current terminal session.
+
+    **Source the workspace:**
+
+    ```bash
+    source ~/ros2_ws/install/setup.bash
+    ```
+
+    **Make this permanent** by adding the source command to your shell configuration:
+
+    ```bash
+    echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
+    source ~/.bashrc
+    ```
+
+    <Note>
+      You must run `source ~/ros2_ws/install/setup.bash` in every new terminal that needs to use the driver, until you add it to `~/.bashrc`.
+    </Note>
+
+  </Accordion>
+
+</AccordionGroup>

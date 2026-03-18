@@ -1,0 +1,75 @@
+---
+title: "Installation"
+description: Installing the ms200_driver ROS 2 package
+---
+
+This page walks you through cloning, building, and verifying the `ms200_driver` package in your ROS 2 workspace.
+
+## Prerequisites
+
+Before installing, make sure you have the following:
+
+- **ROS 2 Jazzy** (or a compatible ROS 2 distribution) installed and sourced
+- **colcon** build tool (`sudo apt install python3-colcon-common-extensions`)
+- **rosdep** for dependency management (`sudo apt install python3-rosdep`)
+- **git** for cloning the repository
+
+<Note>
+If you have not initialized rosdep yet, run `sudo rosdep init && rosdep update` before proceeding.
+</Note>
+
+## Steps
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone `ms200_driver` into the `src` directory of your ROS 2 workspace:
+
+    ```bash
+    cd ~/ros2_ws/src
+    git clone https://github.com/jasonmm24/ms200_driver.git
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    From the workspace root, use `rosdep` to install all required dependencies (including `python3-serial`):
+
+    ```bash
+    cd ~/ros2_ws
+    rosdep install --from-paths src --ignore-src -r -y
+    ```
+  </Step>
+
+  <Step title="Build the package">
+    Build only the `ms200_driver` package with `colcon`, then source the workspace overlay:
+
+    ```bash
+    colcon build --symlink-install --packages-select ms200_driver
+    source install/setup.bash
+    ```
+
+    <Tip>
+    The `--symlink-install` flag lets you edit Python source files without rebuilding. Changes to `ms200_node.py` take effect immediately without running `colcon build` again.
+    </Tip>
+  </Step>
+
+  <Step title="Verify the installation">
+    Confirm the package is visible to ROS 2:
+
+    ```bash
+    ros2 pkg list | grep ms200_driver
+    # Expected output: ms200_driver
+    ```
+
+    If the package appears in the output, the installation was successful.
+  </Step>
+</Steps>
+
+## Sourcing the workspace
+
+<Note>
+You must run `source ~/ros2_ws/install/setup.bash` in every new terminal before using `ms200_driver` commands. To avoid doing this manually, add it to your shell configuration:
+
+```bash
+echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
+```
+</Note>

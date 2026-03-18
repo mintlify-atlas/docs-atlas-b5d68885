@@ -1,0 +1,109 @@
+---
+title: "Serial protocol"
+description: MS200 LiDAR serial communication protocol and packet format
+---
+
+## Overview
+
+The MS200 communicates over UART (serial) using a fixed-length binary packet format. The default baud rate is **230400**. Each packet is exactly **47 bytes** and contains 12 distance measurements covering an angular sweep.
+
+<Info>
+  The driver identifies packets by scanning the byte stream for the two-byte header `0x54 0x2C`. If the header is not found at the current position, bytes are discarded one-by-one until the header is aligned.
+</Info>
+
+## Packet structure
+
+Each packet is 47 bytes long with the following layout:
+
+| Offset | Length | Field | Description |
+|--------|--------|-------|-------------|
+| 0–1 | 2 bytes | Header | Always `0x54 0x2C` — frame start marker |
+| 2–3 | 2 bytes | Speed | Motor speed (little-endian uint16) |
+| 4–5 | 2 bytes | Start Angle | Start angle × 100 in degrees (little-endian uint16) |
+| 6–41 | 36 bytes | Measurement Data | 12 × 3-byte measurement points |
+| 42–43 | 2 bytes | End Angle | End angle × 100 in degrees (little-endian uint16) |
+| 44–45 | 2 bytes | Timestamp | Packet timestamp (little-endian uint16) |
+| 46 | 1 byte | CRC | Checksum byte |
+
+## Measurement point structure
+
+The 36-byte measurement data block contains 12 consecutive 3-byte points:
+
+| Offset (relative) | Length | Field | Description |
+|-------------------|--------|-------|-------------|
+| 0–1 | 2 bytes | Distance | Distance in mm (little-endian uint16) |
+| 2 | 1 byte | Intensity | Signal return intensity |
+
+Point `i` starts at byte offset `6 + (i * 3)` within the packet, for `i` in `0..11`.
+
+## Angle calculation
+
+Angles are stored as integers scaled by 100. To recover degrees:
+
+```python
+start_angle = raw_start_angle / 100.0   # degrees
+end_angle   = raw_end_angle   / 100.0   # degrees
+```
+
+**Zero-cross wrap:** when the sweep crosses 0°/360°, `end_angle` will be numerically less than `start_angle`. Add 360° to correct for this:
+
+```python
+if end_angle < start_angle:
+    end_angle += 360.0
+```
+
+The angular step between consecutive points:
+
+```python
+step = (end_angle - start_angle) / 11.0
+```
+
+The angle of measurement point `i`:
+
+```python
+angle = start_angle + (step * i)
+if angle >= 360.0:
+    angle -= 360.0
+```
+
+## Distance conversion
+
+Distance values are in millimeters. Convert to meters for ROS `LaserScan`:
+
+```python
+distance_meters = distance_mm / 1000.0
+```
+
+<Info>
+  A distance value of `0` indicates an invalid or out-of-range measurement. The driver filters these out and does not include them in the published scan.
+</Info>
+
+## Full rotation detection
+
+Because each packet covers only a partial sweep, the driver accumulates points across multiple packets. A full scan is published when both conditions are met:
+
+- `start_angle < 10.0` — the sensor has wrapped back to the beginning of a revolution
+- `len(scan_points) > 100` — enough points have been collected to form a valid scan
+
+This ensures the published `LaserScan` message represents a complete 360° rotation.
+
+## Python struct parsing reference
+
+```python
+import struct
+
+# Packet-level fields
+speed       = struct.unpack('<H', data[2:4])[0]
+start_angle = struct.unpack('<H', data[4:6])[0] / 100.0
+end_angle   = struct.unpack('<H', data[42:44])[0] / 100.0
+
+# Each measurement point at offset 6 + (i * 3), for i in 0..11
+for i in range(12):
+    base = 6 + (i * 3)
+    distance_mm = struct.unpack('<H', data[base:base+2])[0]
+    intensity   = data[base + 2]
+```
+
+<Info>
+  All multi-byte integer fields use **little-endian** byte order. The `'<H'` format in Python's `struct` module reads an unsigned 16-bit integer in little-endian order.
+</Info>

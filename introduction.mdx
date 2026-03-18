@@ -1,0 +1,66 @@
+---
+title: Introduction
+description: Native ROS 2 Python driver for the MKS/Oradar MS200 TOF LiDAR sensor
+---
+
+# MS200 LiDAR Driver for ROS 2
+
+A lightweight, native ROS 2 driver for the **MKS MS200 / Oradar MS200** Time-of-Flight LiDAR sensor. Written entirely in Python, this driver implements the low-level serial communication protocol to decode sensor data packets and publish standard `sensor_msgs/LaserScan` messages — with no proprietary SDKs required.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get the driver running in under 5 minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/setup/installation">
+    Build and install the ROS 2 package
+  </Card>
+  <Card title="ROS Parameters" icon="sliders" href="/usage/ros-parameters">
+    Configure port, baudrate, and frame ID
+  </Card>
+  <Card title="Protocol Reference" icon="binary" href="/reference/protocol">
+    Understand the MS200 serial packet format
+  </Card>
+</CardGroup>
+
+## What is the MS200?
+
+The MKS MS200 (also marketed as the Oradar MS200) is a compact, affordable 360-degree TOF LiDAR sensor with a range of up to 12 meters. It communicates over a serial (UART) interface, making it easy to interface with single-board computers like the Raspberry Pi.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="No proprietary SDK" icon="lock-open">
+    Pure Python implementation using only `pyserial` — no closed-source binaries required
+  </Card>
+  <Card title="Standard ROS 2 output" icon="robot">
+    Publishes `sensor_msgs/LaserScan` on `/scan`, compatible with Nav2 and SLAM Toolbox
+  </Card>
+  <Card title="Configurable parameters" icon="gear">
+    Serial port, baudrate, and TF frame ID all configurable via ROS 2 parameters at runtime
+  </Card>
+  <Card title="Automatic frame detection" icon="magnifying-glass">
+    Detects the MS200 frame header `0x54 0x2C` automatically to synchronize with the data stream
+  </Card>
+</CardGroup>
+
+## Hardware requirements
+
+| Component | Details |
+|-----------|---------|
+| **Sensor** | MKS MS200 / Oradar MS200 TOF LiDAR |
+| **Interface** | USB-to-Serial adapter (e.g., CP2102, CH340) |
+| **Platform** | Linux-based system (Raspberry Pi, x86_64) with ROS 2 installed |
+| **ROS 2 version** | Tested with ROS 2 Jazzy |
+
+## Software dependencies
+
+The driver depends on standard ROS 2 packages and the Python `pyserial` library:
+
+- `rclpy` — ROS 2 Python client library
+- `sensor_msgs` — Standard sensor message types
+- `std_msgs` — Standard message types
+- `python3-serial` — Python serial port communication
+
+<Info>
+  This driver has been tested on a **Raspberry Pi 5** running **ROS 2 Jazzy**. It should work on any Linux-based platform with ROS 2 installed.
+</Info>

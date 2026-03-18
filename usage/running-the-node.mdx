@@ -1,0 +1,69 @@
+---
+title: "Running the node"
+description: How to start and run the MS200 LiDAR ROS 2 driver node
+---
+
+## Basic execution
+
+To start the MS200 LiDAR driver with default settings, run:
+
+```bash
+ros2 run ms200_driver ms200_node
+```
+
+## What happens at startup
+
+When the node starts, it performs the following in order:
+
+1. Registers the node with name `ms200_node`
+2. Declares and reads the three parameters: `port`, `baudrate`, and `frame_id`
+3. Creates a publisher on the `/scan` topic with queue size 10
+4. Opens the serial port at the configured device path and baud rate
+5. Starts a 1 ms timer that continuously reads incoming serial data
+
+## Expected log output
+
+On successful connection, you will see:
+
+```
+[INFO] [ms200_node]: Conectado al LiDAR en /dev/ttyUSB0 a 230400
+```
+
+If the serial port is unavailable or the device is not connected, the node logs an error and exits the initializer without starting the timer:
+
+```
+[ERROR] [ms200_node]: No se pudo conectar al puerto /dev/ttyUSB0: [Errno 2] No such file or directory: '/dev/ttyUSB0'
+```
+
+<Warning>
+If the port cannot be opened, no scan data will be published. Verify the device path and that you have read/write permission on the serial port before starting the node.
+</Warning>
+
+## Running with custom parameters
+
+You can override the default port, baud rate, or frame ID at launch using `--ros-args`:
+
+```bash
+ros2 run ms200_driver ms200_node --ros-args -p port:=/dev/ttyUSB1 -p baudrate:=115200
+```
+
+See [ROS 2 parameters](/usage/ros-parameters) for the full parameter reference.
+
+## Stopping the node
+
+Press **Ctrl+C** to stop the node. The `KeyboardInterrupt` is caught by the driver, which calls `node.destroy_node()` and `rclpy.shutdown()` before exiting. The serial port is released cleanly.
+
+## Checking node status
+
+While the node is running, you can inspect it with the standard ROS 2 CLI tools:
+
+```bash
+ros2 node list
+# /ms200_node
+```
+
+```bash
+ros2 node info /ms200_node
+```
+
+The output of `ros2 node info` shows the publishers, subscribers, and parameters registered by the node.
